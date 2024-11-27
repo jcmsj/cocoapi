@@ -375,8 +375,8 @@ class COCOeval:
                     tps = np.logical_and(               dtm,  np.logical_not(dtIg) )
                     fps = np.logical_and(np.logical_not(dtm), np.logical_not(dtIg) )
 
-                    tp_sum = np.cumsum(tps, axis=1).astype(dtype=np.float)
-                    fp_sum = np.cumsum(fps, axis=1).astype(dtype=np.float)
+                    tp_sum = np.cumsum(tps, axis=1).astype(dtype=float)
+                    fp_sum = np.cumsum(fps, axis=1).astype(dtype=float)
                     for t, (tp, fp) in enumerate(zip(tp_sum, fp_sum)):
                         tp = np.array(tp)
                         fp = np.array(fp)
@@ -418,6 +418,27 @@ class COCOeval:
         }
         toc = time.time()
         print('DONE (t={:0.2f}s).'.format( toc-tic))
+
+        # Save evaluation results to CSV
+        try:
+            import pandas as pd
+            # Convert eval dictionary to a format suitable for CSV
+            eval_data = {
+                'date': self.eval['date'],
+                'precision_mean': np.mean(precision),
+                'recall_mean': np.mean(recall),
+                'scores_mean': np.mean(scores)
+            }
+            
+            try:
+                df = pd.read_csv('eval.csv')
+                df = pd.concat([df, pd.DataFrame([eval_data])])
+            except FileNotFoundError:
+                df = pd.DataFrame([eval_data])
+                
+            df.to_csv('eval.csv', index=False)
+        except Exception as e:
+            print(f"Warning: Could not save evaluation results to CSV: {str(e)}")
 
     def summarize(self):
         '''
