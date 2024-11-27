@@ -429,14 +429,14 @@ class COCOeval:
                 'recall_mean': np.mean(recall),
                 'scores_mean': np.mean(scores)
             }
-            
+            df = pd.DataFrame([eval_data])
+            print(df)
             try:
-                df = pd.read_csv('eval.csv')
-                df = pd.concat([df, pd.DataFrame([eval_data])])
+                _df = pd.read_csv('./eval.csv')
+                df = pd.concat([_df, pd.DataFrame([eval_data])])
             except FileNotFoundError:
-                df = pd.DataFrame([eval_data])
-                
-            df.to_csv('eval.csv', index=False)
+                pass
+            df.to_csv('./eval.csv', index=False)
         except Exception as e:
             print(f"Warning: Could not save evaluation results to CSV: {str(e)}")
 
