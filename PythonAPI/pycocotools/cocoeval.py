@@ -532,11 +532,12 @@ class COCOeval:
             stats[10] = _summarize(0, areaRng="medium", maxDets=self.params.maxDets[2])
             stats[11] = _summarize(0, areaRng="large", maxDets=self.params.maxDets[2])
 
-            # print per category id (K) by grouping them
+            # group by category id (K) and threshold (T)
             for k in range(len(self.params.catIds)):
-                print(
-                    f"Category {self.params.catIds[k]}: Precision = {np.mean(self.eval['precision'][:,:,k,:,:])}, Recall = {np.mean(self.eval['recall'][:,k,:,:])}"
-                )
+                for t in range(len(self.params.iouThrs)):
+                    print(
+                        f"Category {self.params.catIds[k]}, IoU {self.params.iouThrs[t]}: Precision = {np.mean(self.eval['precision'][t,:,k,:,:])}, Recall = {np.mean(self.eval['recall'][t,k,:,:])}"
+                    )
 
             return stats
 
