@@ -7,7 +7,6 @@ from collections import defaultdict
 from . import mask as maskUtils
 import copy
 
-
 class COCOeval:
     # Interface for evaluating detection on the Microsoft COCO dataset.
     #
@@ -533,11 +532,27 @@ class COCOeval:
             stats[11] = _summarize(0, areaRng="large", maxDets=self.params.maxDets[2])
 
             # group by category id (K) and threshold (T)
+            data = []
             for k in range(len(self.params.catIds)):
                 for t in range(len(self.params.iouThrs)):
-                    print(
-                        f"Category {self.params.catIds[k]}, IoU {self.params.iouThrs[t]}: Precision = {np.mean(self.eval['precision'][t,:,k,:,:])}, Recall = {np.mean(self.eval['recall'][t,k,:,:])}"
-                    )
+                    precision = np.mean(self.eval['precision'][t,:,k,:,:])
+                    recall = np.mean(self.eval['recall'][t,k,:,:])
+                    data.append({
+                        'Category': self.params.catIds[k],
+                        'IoU': self.params.iouThrs[t],
+                        'Precision': precision,
+                        'Recall': recall
+                    })
+                    print(f"Category {self.params.catIds[k]}, IoU {self.params.iouThrs[t]}: Precision = {precision}, Recall = {recall}")
+
+            # Save to DataFrame and CSV
+            try:
+                import pandas as pd
+                df = pd.DataFrame(data)
+                df.to_csv('./per_category_per_threshold.csv', index=False)
+                print(df)
+            except Exception as e:
+                print(f"Warning: Could not save per category per threshold results to CSV: {str(e)}")
 
             return stats
 
