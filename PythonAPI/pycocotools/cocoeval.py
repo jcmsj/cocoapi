@@ -544,6 +544,25 @@ class COCOeval:
                         'Recall': recall
                     })
                     print(f"Category {self.params.catIds[k]}, IoU {self.params.iouThrs[t]}: Precision = {precision}, Recall = {recall}")
+                    # Calculate AP_50:95
+                    if self.params.iouThrs[t] == 0.5:
+                        ap_50_95 = np.mean(self.eval['precision'][t,:,k,:,:])
+                        print(f"AP_50_95 = {ap_50_95}")
+
+                    # Calculate AP_75
+                    if self.params.iouThrs[t] == 0.75:
+                        ap_75 = np.mean(self.eval['precision'][t,:,k,:,:])
+                        print(f"AP_75 = {ap_75}")
+
+                    # Calculate AP_50
+                    if self.params.iouThrs[t] == 0.5:
+                        ap_50 = np.mean(self.eval['precision'][t,:,k,:,:])
+                        print(f"AP_50 = {ap_50}")
+            # Print AP_50:95, AP_75, AP_50
+            ap_50 = np.mean([d['Precision'] for d in data if d['IoU'] == 0.5])
+            ap_75 = np.mean([d['Precision'] for d in data if d['IoU'] == 0.75])
+            ap_50_95 = np.mean([d['Precision'] for d in data if d['IoU'] >= 0.5 and d['IoU'] <= 0.95])
+            print(f"AP_50:95 = {ap_50_95}, AP_75 = {ap_75}, AP_50 = {ap_50}")
 
             # Save to DataFrame and CSV
             try:
