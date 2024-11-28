@@ -478,12 +478,12 @@ class COCOeval:
     def summarize(self):
         """
         Compute and display summary metrics for evaluation results.
-        Note this functin can *only* be applied on the default parameter setting
+        Note this function can *only* be applied on the default parameter setting
         """
 
-        def _summarize(ap=1, iouThr=None, areaRng="all", maxDets=100):
+        def _summarize(ap=1, iouThr=None, areaRng="all", maxDets=100, catId=None):
             p = self.params
-            iStr = " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} ] = {:0.3f}"
+            iStr = " {:<18} {} @[ IoU={:<9} | area={:>6s} | maxDets={:>3d} | catId={:>3s} ] = {:0.3f}"
             titleStr = "Average Precision" if ap == 1 else "Average Recall"
             typeStr = "(AP)" if ap == 1 else "(AR)"
             iouStr = (
@@ -491,6 +491,7 @@ class COCOeval:
                 if iouThr is None
                 else "{:0.2f}".format(iouThr)
             )
+            catStr = str(catId) if catId is not None else "all"
 
             aind = [i for i, aRng in enumerate(p.areaRngLbl) if aRng == areaRng]
             mind = [i for i, mDet in enumerate(p.maxDets) if mDet == maxDets]
@@ -501,19 +502,27 @@ class COCOeval:
                 if iouThr is not None:
                     t = np.where(iouThr == p.iouThrs)[0]
                     s = s[t]
-                s = s[:, :, :, aind, mind]
+                if catId is not None:
+                    c = np.where(catId == p.catIds)[0]
+                    s = s[:, :, c, aind, mind]
+                else:
+                    s = s[:, :, :, aind, mind]
             else:
                 # dimension of recall: [TxKxAxM]
                 s = self.eval["recall"]
                 if iouThr is not None:
                     t = np.where(iouThr == p.iouThrs)[0]
                     s = s[t]
-                s = s[:, :, aind, mind]
+                if catId is not None:
+                    c = np.where(catId == p.catIds)[0]
+                    s = s[:, c, aind, mind]
+                else:
+                    s = s[:, :, aind, mind]
             if len(s[s > -1]) == 0:
                 mean_s = -1
             else:
                 mean_s = np.mean(s[s > -1])
-            print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, mean_s))
+            print(iStr.format(titleStr, typeStr, iouStr, areaRng, maxDets, catStr, mean_s))
             return mean_s
 
         def _summarizeDets():
@@ -531,47 +540,15 @@ class COCOeval:
             stats[10] = _summarize(0, areaRng="medium", maxDets=self.params.maxDets[2])
             stats[11] = _summarize(0, areaRng="large", maxDets=self.params.maxDets[2])
 
-            # group by category id (K) and threshold (T)
-            data = []
-            for k in range(len(self.params.catIds)):
-                for t in range(len(self.params.iouThrs)):
-                    precision = np.mean(self.eval['precision'][t,:,k,:,:])
-                    recall = np.mean(self.eval['recall'][t,k,:,:])
-                    data.append({
-                        'Category': self.params.catIds[k],
-                        'IoU': self.params.iouThrs[t],
-                        'Precision': precision,
-                        'Recall': recall
-                    })
-                    print(f"Category {self.params.catIds[k]}, IoU {self.params.iouThrs[t]}: Precision = {precision}, Recall = {recall}")
-                    # Calculate AP_50:95
-                    if self.params.iouThrs[t] == 0.5:
-                        ap_50_95 = np.mean(self.eval['precision'][t,:,k,:,:])
-                        print(f"AP_50_95 = {ap_50_95}")
-
-                    # Calculate AP_75
-                    if self.params.iouThrs[t] == 0.75:
-                        ap_75 = np.mean(self.eval['precision'][t,:,k,:,:])
-                        print(f"AP_75 = {ap_75}")
-
-                    # Calculate AP_50
-                    if self.params.iouThrs[t] == 0.5:
-                        ap_50 = np.mean(self.eval['precision'][t,:,k,:,:])
-                        print(f"AP_50 = {ap_50}")
-            # Print AP_50:95, AP_75, AP_50
-            ap_50 = np.mean([d['Precision'] for d in data if d['IoU'] == 0.5])
-            ap_75 = np.mean([d['Precision'] for d in data if d['IoU'] == 0.75])
-            ap_50_95 = np.mean([d['Precision'] for d in data if d['IoU'] >= 0.5 and d['IoU'] <= 0.95])
-            print(f"AP_50:95 = {ap_50_95}, AP_75 = {ap_75}, AP_50 = {ap_50}")
-
-            # Save to DataFrame and CSV
-            try:
-                import pandas as pd
-                df = pd.DataFrame(data)
-                df.to_csv('./per_category_per_threshold.csv', index=False)
-                print(df)
-            except Exception as e:
-                print(f"Warning: Could not save per category per threshold results to CSV: {str(e)}")
+            # Print per class (catId) summaries
+            for catId in self.params.catIds:
+                print(f"\nCategory ID: {catId}")
+                _summarize(1, catId=catId)
+                _summarize(1, iouThr=0.5, maxDets=self.params.maxDets[2], catId=catId)
+                _summarize(1, iouThr=0.75, maxDets=self.params.maxDets[2], catId=catId)
+                _summarize(0, maxDets=self.params.maxDets[0], catId=catId)
+                _summarize(0, maxDets=self.params.maxDets[1], catId=catId)
+                _summarize(0, maxDets=self.params.maxDets[2], catId=catId)
 
             return stats
 
